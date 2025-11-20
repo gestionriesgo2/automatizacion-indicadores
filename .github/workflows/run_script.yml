@@ -2,13 +2,18 @@ name: Ejecutar script Python
 
 on:
   schedule:
-    # GitHub Actions mínimo cada 5 minutos
-    - cron: '*/5 * * * *'  
+    # GitHub Actions permite mínimo cada 5 minutos
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
+
+    # 🔥 MUY IMPORTANTE:
+    # Indica que este job usa el Environment donde está el secret
+    environment: GOOGLE_DRIVE_JSON
+
     steps:
       # Clonar el repositorio
       - uses: actions/checkout@v3
@@ -27,5 +32,4 @@ jobs:
       - name: Run script
         run: python main.py
         env:
-          # Pegar aquí el JSON de tu cuenta de servicio como secreto en GitHub
           GOOGLE_DRIVE_JSON: ${{ secrets.GOOGLE_DRIVE_JSON }}
