@@ -2,21 +2,30 @@ name: Ejecutar script Python
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  
+    # GitHub Actions mínimo cada 5 minutos
+    - cron: '*/5 * * * *'  
   workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
+      # Clonar el repositorio
       - uses: actions/checkout@v3
+
+      # Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
+      # Instalar dependencias
       - name: Install dependencies
         run: pip install -r requirements.txt python-dotenv openpyxl pandas google-api-python-client
+
+      # Ejecutar script
       - name: Run script
         run: python main.py
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_DRIVE_JSON }}
+          # Pegar aquí el JSON de tu cuenta de servicio como secreto en GitHub
+          GOOGLE_DRIVE_JSON: ${{ secrets.GOOGLE_DRIVE_JSON }}
