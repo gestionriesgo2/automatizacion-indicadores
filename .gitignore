@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+# Entorno virtual
+venv/
+.env
+
+# Credenciales de Google Drive
+*.json
+
+# Archivos temporales de IDE
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Archivos generados
+*.xlsx
+*.xlsm
+*.csv
