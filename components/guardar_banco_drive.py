@@ -39,11 +39,22 @@ def generar_resumenes(banco):
     resumen_estado.loc["TOTAL GENERAL"] = resumen_estado.sum()
     resumen_estado = resumen_estado.reset_index()
 
+    # =====================================================
+    # 🔥 NORMALIZAR PERIODICIDAD (MUY IMPORTANTE)
+    # =====================================================
+
+    banco["PERIODICIDAD MEDICION"] = (
+        banco["PERIODICIDAD MEDICION"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
 
     # =====================================================
-    # 3️⃣ PERIODICIDAD + CUMPLE (COLUMNAS SEPARADAS)
+    # 3️⃣ PERIODICIDAD + FICHAS POR CADA PERIODICIDAD
     # =====================================================
-    pivot_periodicidad = pd.pivot_table(
+
+    pivot_conteo = pd.pivot_table(
         banco,
         index="ÁREA",
         columns="PERIODICIDAD MEDICION",
@@ -52,22 +63,46 @@ def generar_resumenes(banco):
         fill_value=0
     )
 
-    pivot_cumple = pd.pivot_table(
+    pivot_codigos = pd.pivot_table(
         banco,
         index="ÁREA",
-        columns="VALORACIÓN",
+        columns="PERIODICIDAD MEDICION",
         values="CONSE",
-        aggfunc="count",
-        fill_value=0
+        aggfunc=lambda x: ", ".join(sorted(x.astype(str).unique())),
+        fill_value=""
     )
 
-    resumen_periodicidad = pd.concat(
-        [pivot_periodicidad, pivot_cumple],
-        axis=1
-    )
+    pivot_codigos.columns = [f"{col} - FICHAS" for col in pivot_codigos.columns]
 
-    resumen_periodicidad["TOTAL"] = resumen_periodicidad.sum(axis=1)
-    resumen_periodicidad.loc["TOTAL GENERAL"] = resumen_periodicidad.sum()
+    resumen_periodicidad = pd.concat([pivot_conteo, pivot_codigos], axis=1)
+
+    # =====================================================
+    # ORDEN PERSONALIZADO SEGURO
+    # =====================================================
+
+    orden_periodicidad = ["MENSUAL", "BIMENSUAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"]
+
+    columnas_ordenadas = []
+
+    for periodo in orden_periodicidad:
+        if periodo in resumen_periodicidad.columns:
+            columnas_ordenadas.append(periodo)
+        if f"{periodo} - FICHAS" in resumen_periodicidad.columns:
+            columnas_ordenadas.append(f"{periodo} - FICHAS")
+
+    # 🔥 Solo reordenar si encontró columnas
+    if columnas_ordenadas:
+        resumen_periodicidad = resumen_periodicidad[columnas_ordenadas]
+
+    # =====================================================
+    # TOTALES
+    # =====================================================
+
+    resumen_periodicidad["TOTAL"] = resumen_periodicidad.select_dtypes(include="number").sum(axis=1)
+
+    totales = resumen_periodicidad.select_dtypes(include="number").sum()
+    resumen_periodicidad.loc["TOTAL GENERAL"] = totales
+
     resumen_periodicidad = resumen_periodicidad.reset_index()
 
 

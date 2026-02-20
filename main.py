@@ -85,7 +85,7 @@ def main():
             raise ValueError(f"No existen {label}s")
         print(f"📁 Carpetas encontradas en '{label}': {[f['name'] for f in folders]}")
         for f in folders:
-            if f["name"].lower() == preferred_name.lower():
+            if preferred_name.lower() in f["name"].lower():
                 print(f"➡ Se selecciona carpeta preferida: {f['name']}")
                 return f["id"]
         folders.sort(key=lambda x: x["name"])
@@ -169,15 +169,17 @@ def main():
     # GUARDAR
     # ==================================================
     print("\n💾 Guardando banco y reportes en Drive...")
-    banco_base_id = get_file_id_by_name(BANCO_MES_FOLDER_ID, BANCO_BASE_FILENAME)
+# 🔹 El BASE se guarda en la carpeta del AÑO (no en el mes)
+    banco_base_id = get_file_id_by_name(BANCO_ANIO_FOLDER_ID, BANCO_BASE_FILENAME)
 
     guardar_banco_con_estilos_drive(
         banco=banco,
         create_or_update_file=create_or_update_file,
         banco_file_id=banco_base_id,
-        banco_folder_id=BANCO_MES_FOLDER_ID,
+        banco_folder_id=BANCO_ANIO_FOLDER_ID,
         filename=BANCO_BASE_FILENAME
     )
+
 
     guardar_banco_con_estilos_drive(
         banco=banco,
