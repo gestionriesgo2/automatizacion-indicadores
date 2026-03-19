@@ -2,6 +2,7 @@ import pandas as pd
 from openpyxl import load_workbook
 import re
 
+
 def procesar_fichas_drive(
     files_anio,
     banco,
@@ -19,6 +20,9 @@ def procesar_fichas_drive(
     """
 
     registros = []
+    
+    if "RANGO DE GESTION" not in banco.columns:
+        banco["RANGO DE GESTION"] = None
 
     for f in files_anio:
         filename = f["name"]
@@ -29,7 +33,7 @@ def procesar_fichas_drive(
 
         try:
             stream = read_excel_from_drive(file_id)
-            wb = load_workbook(stream, data_only=True)
+            wb = load_workbook(stream, data_only=True, read_only=True)
             nombre_base = filename.lower().replace(".xlsx", "").replace(".xlsm", "")
 
             # ----------------------------
@@ -106,7 +110,8 @@ def procesar_fichas_drive(
                 "Critico": clean_str(ws["K11"].value),
                 "Aceptable": clean_str(ws["L11"].value),
                 "Satisfactorio": clean_str(ws["M11"].value),
-                "VALORACIÓN": clean_str(ws["O19"].value)
+                "VALORACIÓN": clean_str(ws["O19"].value),
+                "RANGO DE GESTION": clean_str(ws["P19"].value)
             }
 
             # ----------------------------
@@ -156,69 +161,32 @@ def procesar_fichas_drive(
                     fila[mes] = "N/A"
                     valores.append(None)
 
-            # -----------------------------------
-            # Lógica tipo Excel
-            # -----------------------------------
+            # ----------------------------
+            # VALOR ANUAL desde Excel (N19)
+            # ----------------------------
+            v_anual = ws["N19"].value
 
-            periodicidad = clean_str(ws["C11"].value)
-            conteo_validos = len(valores_limpios)
-
-            if conteo_validos == 0:
+            if v_anual is None or str(v_anual).strip() == "" or "N/A" in str(v_anual) or "#" in str(v_anual):
                 fila["VALOR ANUAL"] = ""
             else:
-
-                minimos = {
-                    "Mensual": 12,
-                    "Bimensual": 6,
-                    "Trimestral": 4,
-                    "Semestral": 2,
-                    "Anual": 1
-                }
-
-                minimo_requerido = minimos.get(periodicidad)
-
-                if minimo_requerido and conteo_validos < minimo_requerido:
-                    resultado = min(valores_limpios)
-
-                else:
-                    def promedio_grupos(grupos):
-                        proms = []
-                        for g in grupos:
-                            g_validos = [x for x in g if x is not None]
-                            if g_validos:
-                                proms.append(sum(g_validos) / len(g_validos))
-                        return sum(proms) / len(proms) if proms else None
-
-                    if periodicidad == "Mensual":
-                        resultado = sum(valores_limpios) / conteo_validos
-
-                    elif periodicidad == "Bimensual":
-                        grupos = [valores[0:2], valores[2:4], valores[4:6],
-                                valores[6:8], valores[8:10], valores[10:12]]
-                        resultado = promedio_grupos(grupos)
-
-                    elif periodicidad == "Trimestral":
-                        grupos = [valores[0:3], valores[3:6],
-                                valores[6:9], valores[9:12]]
-                        resultado = promedio_grupos(grupos)
-
-                    elif periodicidad == "Semestral":
-                        grupos = [valores[0:6], valores[6:12]]
-                        resultado = promedio_grupos(grupos)
-
-                    elif periodicidad == "Anual":
-                        resultado = sum(valores_limpios) / conteo_validos
+                try:
+                    if isinstance(v_anual, str) and "%" in v_anual:
+                        num = float(v_anual.replace("%", "").replace(",", "."))
+                        fila["VALOR ANUAL"] = f"{round(num)}%"
 
                     else:
-                        fila["VALOR ANUAL"] = "SIN TIPO"
-                        resultado = None
+                        num = float(v_anual)
 
-                if resultado is not None:
-                    if es_porcentaje:
-                        fila["VALOR ANUAL"] = f"{resultado:.2f}%"
-                    else:
-                        fila["VALOR ANUAL"] = round(resultado, 2)
+                        if es_porcentaje:
+                            if 0 < num <= 1:
+                                num = num * 100
 
+                            fila["VALOR ANUAL"] = f"{round(num)}%"
+                        else:
+                            fila["VALOR ANUAL"] = round(num, 2)
+
+                except:
+                    fila["VALOR ANUAL"] = ""
 
 
             # ----------------------------
